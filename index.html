@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f4f7f5">
+    <title>返済計画シミュレーター</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="page-header">
+        <div>
+          <p class="eyebrow">REPAYMENT PLANNER</p>
+          <h1>返済計画シミュレーター</h1>
+          <p class="intro">借入先ごとの返済推移と、目標月に向けた追加返済額を確認できます。</p>
+        </div>
+        <span class="privacy-note">入力内容はこの画面内だけで処理されます</span>
+      </header>
+
+      <section class="panel settings-panel" aria-labelledby="plan-heading">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">PLAN SETTINGS</p>
+            <h2 id="plan-heading">計画の条件</h2>
+          </div>
+          <p class="section-help">基準月から毎月返済する想定で計算します。</p>
+        </div>
+        <div class="settings-grid">
+          <label class="field">
+            <span>返済開始月</span>
+            <input id="start-month" type="month" required>
+          </label>
+          <label class="field">
+            <span>完済目標月</span>
+            <input id="target-month" type="month" required>
+          </label>
+        </div>
+      </section>
+
+      <section class="panel accounts-panel" aria-labelledby="accounts-heading">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">YOUR DEBTS</p>
+            <h2 id="accounts-heading">借入先</h2>
+          </div>
+          <button class="button button-secondary" id="add-account" type="button">＋ 借入先を追加</button>
+        </div>
+        <p class="section-help accounts-help">現在の元金残高・年利・毎月の定額返済額を入力してください。追加返済額は定額返済に上乗せする月額です。</p>
+        <div class="account-list" id="account-list" aria-live="polite"></div>
+        <p class="form-error" id="form-error" role="alert" hidden></p>
+        <p class="assumption-note">利息は「月初の元金残高 × 年利 ÷ 12」を1円単位に四捨五入し、月末に返済する簡易試算です。実際の利息・返済額・完済日は、金融機関の計算方法や返済日によって異なります。</p>
+      </section>
+
+      <section class="panel results-panel" aria-labelledby="results-heading">
+        <div class="section-heading results-heading">
+          <div>
+            <p class="eyebrow">PROJECTION</p>
+            <h2 id="results-heading">返済の見通し</h2>
+          </div>
+          <p class="section-help" id="target-summary"></p>
+        </div>
+        <div id="results-content">
+          <div class="empty-state">借入先の条件を入力すると、返済推移が表示されます。</div>
+        </div>
+      </section>
+      <footer class="page-footer">このシミュレーションは目安です。実際の返済計画は各金融機関にご確認ください。</footer>
+    </main>
+  </body>
+</html>
