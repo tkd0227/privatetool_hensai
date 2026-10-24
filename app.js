@@ -10,6 +10,8 @@ const formError = document.querySelector("#form-error");
 const targetSummary = document.querySelector("#target-summary");
 const accounts = [];
 const currentMonth = monthValue(new Date());
+let lastSubmittedAccounts = null;
+let planChangedSinceSubmit = false;
 
 function monthValue(date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
@@ -93,7 +95,7 @@ function renderAccountCard(account, index) {
   name.setAttribute("aria-label", `借入先${index + 1}の名前`);
   name.addEventListener("input", () => {
     account.name = name.value;
-    updateResults();
+    markPlanChanged();
   });
   titleWrap.append(swatch, name);
 
@@ -106,7 +108,7 @@ function renderAccountCard(account, index) {
     const accountIndex = accounts.findIndex((item) => item.id === account.id);
     if (accountIndex !== -1) accounts.splice(accountIndex, 1);
     renderAccounts();
-    updateResults();
+    markPlanChanged();
   });
   heading.append(titleWrap, remove);
 
@@ -122,7 +124,7 @@ function renderAccountCard(account, index) {
     const field = createField(label, type, value, unit, min, max, step);
     field.input.addEventListener("input", () => {
       account[key] = field.input.value;
-      updateResults();
+      markPlanChanged();
     });
     fields.append(field.label);
   }
@@ -131,7 +133,7 @@ function renderAccountCard(account, index) {
     const field = createOptionalMonthField(label, account[key]);
     field.input.addEventListener("input", () => {
       account[key] = field.input.value;
-      updateResults();
+      markPlanChanged();
     });
     fields.append(field.label);
   }
@@ -439,7 +441,7 @@ function renderResults(parsedAccounts) {
 
   content.append(chartWrap, legend, cards, detailsHeading, scheduleList);
   resultsContent.replaceChildren(content);
-  targetSummary.textContent = "開始月は借入先ごと（未設定は今月から試算）";
+  updateTargetSummary();
   const maxBalance = Math.max(...parsedAccounts.map((account) => account.balance));
   requestAnimationFrame(() => drawChart(series, maxBalance));
 }
@@ -450,11 +452,30 @@ function updateResults() {
   formError.textContent = error;
   if (error) {
     resultsContent.innerHTML = '<div class="empty-state">入力内容を確認してください。</div>';
+    lastSubmittedAccounts = null;
+    planChangedSinceSubmit = false;
     targetSummary.textContent = "";
     return;
   }
-  const parsedAccounts = accounts.map(parseAccount);
-  renderResults(parsedAccounts);
+  lastSubmittedAccounts = accounts.map((account) => ({
+    ...account,
+    ...parseAccount(account),
+  }));
+  planChangedSinceSubmit = false;
+  renderResults(lastSubmittedAccounts);
+}
+
+function updateTargetSummary() {
+  targetSummary.textContent = planChangedSinceSubmit
+    ? "入力内容が未反映です。「返済の見通しを立てる」を押して更新してください。"
+    : "開始月は借入先ごと（未設定は今月から試算）";
+}
+
+function markPlanChanged() {
+  planChangedSinceSubmit = true;
+  if (lastSubmittedAccounts) {
+    updateTargetSummary();
+  }
 }
 
 document.querySelector("#add-account").addEventListener("click", () => {
@@ -470,13 +491,14 @@ document.querySelector("#add-account").addEventListener("click", () => {
     targetMonth: "",
   });
   renderAccounts();
-  updateResults();
+  markPlanChanged();
   accountList.lastElementChild?.querySelector('input[type="number"]')?.focus();
 });
 
+document.querySelector("#calculate-plan").addEventListener("click", updateResults);
+
 window.addEventListener("resize", () => {
-  const canvas = document.querySelector("#balance-chart");
-  if (canvas && accounts.every((account) => parseAccount(account) !== null)) updateResults();
+  if (lastSubmittedAccounts) renderResults(lastSubmittedAccounts);
 });
 
 accounts.push({
@@ -490,4 +512,3 @@ accounts.push({
   targetMonth: "",
 });
 renderAccounts();
-updateResults();

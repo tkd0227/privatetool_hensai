@@ -29,6 +29,7 @@
         </div>
         <p class="section-help accounts-help">返済開始月・完済目標月は借入先ごとに設定できます（どちらも任意）。開始月が未設定の場合は今月から試算します。追加返済額は定額返済に上乗せする月額です。</p>
         <div class="account-list" id="account-list" aria-live="polite"></div>
+        <button class="button button-primary" id="calculate-plan" type="button">返済の見通しを立てる</button>
         <p class="form-error" id="form-error" role="alert" hidden></p>
         <p class="assumption-note">利息は「月初の元金残高 × 年利 ÷ 12」を1円単位に四捨五入し、月末に返済する簡易試算です。実際の利息・返済額・完済日は、金融機関の計算方法や返済日によって異なります。</p>
       </section>
@@ -42,7 +43,7 @@
           <p class="section-help" id="target-summary"></p>
         </div>
         <div id="results-content">
-          <div class="empty-state">借入先の条件を入力すると、返済推移が表示されます。</div>
+          <div class="empty-state">借入先の条件を入力し、「返済の見通しを立てる」を押すと返済推移が表示されます。</div>
         </div>
       </section>
       <footer class="page-footer">このシミュレーションは目安です。実際の返済計画は各金融機関にご確認ください。</footer>

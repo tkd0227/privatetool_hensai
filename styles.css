@@ -153,6 +153,20 @@ h2 {
   background: #e9f4ec;
 }
 
+.button-primary {
+  display: block;
+  width: 100%;
+  min-height: 46px;
+  margin-top: 16px;
+  color: #fff;
+  background: var(--green);
+  font-size: 14px;
+}
+
+.button-primary:hover {
+  background: var(--green-dark);
+}
+
 .button-remove {
   min-height: 30px;
   padding: 5px 9px;
