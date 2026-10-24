@@ -117,7 +117,7 @@ function renderAccountCard(account, index) {
   const fieldDefinitions = [
     ["現在の元金残高", "number", account.balance, "円", "1", String(MAX_INPUT_AMOUNT), "1", "balance"],
     ["年利", "number", account.apr, "%", "0", "100", "0.01", "apr"],
-    ["毎月の定額返済額", "number", account.payment, "円", "0", String(MAX_INPUT_AMOUNT), "1", "payment"],
+    ["毎月の定額返済額（利息込み）", "number", account.payment, "円", "0", String(MAX_INPUT_AMOUNT), "1", "payment"],
     ["毎月の追加返済額", "number", account.extra, "円", "0", String(MAX_INPUT_AMOUNT), "1", "extra"],
   ];
   for (const [label, type, value, unit, min, max, step, key] of fieldDefinitions) {
@@ -169,12 +169,13 @@ function calculateSchedule(account, extra, maxMonths = MAX_PROJECTION_MONTHS) {
   const rows = [{ balance, interest: 0, payment: 0, principal: 0 }];
   for (let month = 1; month <= maxMonths && balance > 0; month += 1) {
     const interest = Math.round((balance * account.apr) / 100 / 12);
-    const due = balance + interest;
-    const payment = Math.min(due, account.payment + extra);
-    const principal = Math.max(0, payment - interest);
-    balance = Math.max(0, due - payment);
+    const amountDue = balance + interest;
+    const payment = Math.min(amountDue, account.payment + extra);
+    const interestPaid = Math.min(interest, payment);
+    const principalPaid = Math.min(balance, Math.max(0, payment - interestPaid));
+    balance = Math.max(0, amountDue - payment);
     totalInterest += interest;
-    rows.push({ balance, interest, payment, principal });
+    rows.push({ balance, interest, interestPaid, payment, principal: principalPaid });
   }
   return {
     rows,
@@ -291,13 +292,13 @@ function createScheduleDetails(account, index, schedule, startMonth) {
   name.append(swatch, label);
   const caption = document.createElement("span");
   caption.className = "schedule-caption";
-  caption.textContent = `定額 ${formatYen(account.payment)} ＋ 追加 ${formatYen(account.extra)}/月`;
+  caption.textContent = `定額 ${formatYen(account.payment)}（利息込み）＋ 追加 ${formatYen(account.extra)}/月`;
   summary.append(name, caption);
   const tableWrap = document.createElement("div");
   tableWrap.className = "table-scroll";
   const table = document.createElement("table");
   table.className = "schedule-table";
-  table.innerHTML = "<thead><tr><th>月</th><th>返済前元金</th><th>利息</th><th>返済額</th><th>返済後元金</th></tr></thead>";
+  table.innerHTML = "<thead><tr><th>月</th><th>返済前元金</th><th>発生利息</th><th>返済額</th><th>元金返済分</th><th>返済後元金</th></tr></thead>";
   const body = document.createElement("tbody");
   schedule.rows.forEach((row, month) => {
     if (month === 0) return;
@@ -307,6 +308,7 @@ function createScheduleDetails(account, index, schedule, startMonth) {
       formatYen(schedule.rows[month - 1].balance),
       formatYen(row.interest),
       formatYen(row.payment),
+      formatYen(row.principal),
       formatYen(row.balance),
     ];
     for (const value of values) {
