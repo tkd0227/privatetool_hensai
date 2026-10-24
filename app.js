@@ -5,12 +5,11 @@ const MAX_ACCOUNTS = 5;
 const MAX_PROJECTION_MONTHS = 600;
 const MAX_INPUT_AMOUNT = 1_000_000_000;
 const accountList = document.querySelector("#account-list");
-const startMonthInput = document.querySelector("#start-month");
-const targetMonthInput = document.querySelector("#target-month");
 const resultsContent = document.querySelector("#results-content");
 const formError = document.querySelector("#form-error");
 const targetSummary = document.querySelector("#target-summary");
 const accounts = [];
+const currentMonth = monthValue(new Date());
 
 function monthValue(date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
@@ -61,6 +60,19 @@ function createField(labelText, inputType, value, unit, min, max, step = "1") {
   return { label, input };
 }
 
+function createOptionalMonthField(labelText, value) {
+  const label = document.createElement("label");
+  label.className = "field";
+  const caption = document.createElement("span");
+  caption.textContent = `${labelText}（任意）`;
+  const input = document.createElement("input");
+  input.type = "month";
+  input.value = value;
+  input.setAttribute("aria-label", `${labelText}（任意）`);
+  label.append(caption, input);
+  return { label, input };
+}
+
 function renderAccountCard(account, index) {
   const card = document.createElement("article");
   card.className = "account-card";
@@ -108,6 +120,15 @@ function renderAccountCard(account, index) {
   ];
   for (const [label, type, value, unit, min, max, step, key] of fieldDefinitions) {
     const field = createField(label, type, value, unit, min, max, step);
+    field.input.addEventListener("input", () => {
+      account[key] = field.input.value;
+      updateResults();
+    });
+    fields.append(field.label);
+  }
+
+  for (const [label, key] of [["返済開始月", "startMonth"], ["完済目標月", "targetMonth"]]) {
+    const field = createOptionalMonthField(label, account[key]);
     field.input.addEventListener("input", () => {
       account[key] = field.input.value;
       updateResults();
@@ -176,20 +197,26 @@ function requiredExtra(account, months) {
   return low;
 }
 
+function getStartMonth(account) {
+  return account.startMonth || currentMonth;
+}
+
 function validatePlan() {
   if (accounts.length === 0) return "借入先を1件以上追加してください。";
   const parsed = accounts.map(parseAccount);
   if (parsed.some((account) => account === null)) {
     return "元金残高は1円以上、年利は0〜100%、返済額は0円以上で入力してください。";
   }
-  if (!startMonthInput.value || !targetMonthInput.value) return "返済開始月と完済目標月を入力してください。";
-  const monthCount = monthsBetween(startMonthInput.value, targetMonthInput.value) + 1;
-  if (monthCount < 1) return "完済目標月は返済開始月以降に設定してください。";
-  if (monthCount > MAX_PROJECTION_MONTHS) return "完済目標月は返済開始月から50年以内に設定してください。";
+  for (const account of accounts) {
+    if (!account.targetMonth) continue;
+    const monthCount = monthsBetween(getStartMonth(account), account.targetMonth) + 1;
+    if (monthCount < 1) return `${account.name || "借入先"}の完済目標月は返済開始月以降に設定してください。`;
+    if (monthCount > MAX_PROJECTION_MONTHS) return `${account.name || "借入先"}の完済目標月は返済開始月から50年以内に設定してください。`;
+  }
   return "";
 }
 
-function createSummaryCard(account, index, schedule, neededExtra, targetMonths) {
+function createSummaryCard(account, index, schedule, neededExtra, startMonth, targetMonths) {
   const card = document.createElement("article");
   card.className = "summary-card";
   const top = document.createElement("div");
@@ -219,30 +246,36 @@ function createSummaryCard(account, index, schedule, neededExtra, targetMonths) 
     values.append(item);
   }
 
+  const dateMeta = document.createElement("span");
+  dateMeta.className = "summary-meta";
+  dateMeta.textContent = `開始：${account.startMonth ? formatMonth(startMonth) : "今月（未設定）"} ・ 目標：${account.targetMonth ? formatMonth(account.targetMonth) : "なし"}`;
+
   const meta = document.createElement("span");
   meta.className = "summary-meta";
   if (schedule.payoffMonth === null) {
     meta.classList.add("status-bad");
     meta.textContent = "現在の返済設定では50年以内に完済できません。定額返済額または追加返済額を見直してください。";
   } else {
-    const payoffDate = addMonths(startMonthInput.value, schedule.payoffMonth - 1);
+    const payoffDate = addMonths(startMonth, schedule.payoffMonth - 1);
     meta.textContent = `完済見込み：${formatMonth(payoffDate)} ・ 返済総額：${formatYen(account.balance + schedule.totalInterest)}`;
-    if (neededExtra === null) {
-      meta.classList.add("status-bad");
-      meta.textContent += " ・ 目標月の必要額を計算できません";
-    } else if (account.extra >= neededExtra) {
-      meta.classList.add("status-good");
-      meta.textContent += ` ・ 目標月に間に合う設定です（必要な追加返済：${formatYen(neededExtra)}/月）`;
-    } else {
-      meta.classList.add("status-warn");
-      meta.textContent += ` ・ 目標月まであと${formatYen(neededExtra - account.extra)}/月の追加が必要`;
+    if (targetMonths !== null) {
+      if (neededExtra === null) {
+        meta.classList.add("status-bad");
+        meta.textContent += " ・ 目標月の必要額を計算できません";
+      } else if (account.extra >= neededExtra) {
+        meta.classList.add("status-good");
+        meta.textContent += ` ・ 目標月に間に合う設定です（必要な追加返済：${formatYen(neededExtra)}/月）`;
+      } else {
+        meta.classList.add("status-warn");
+        meta.textContent += ` ・ 目標月まであと${formatYen(neededExtra - account.extra)}/月の追加が必要`;
+      }
     }
   }
-  card.append(top, values, meta);
+  card.append(top, values, dateMeta, meta);
   return card;
 }
 
-function createScheduleDetails(account, index, schedule) {
+function createScheduleDetails(account, index, schedule, startMonth) {
   const details = document.createElement("details");
   details.className = "schedule-item";
   const summary = document.createElement("summary");
@@ -268,7 +301,7 @@ function createScheduleDetails(account, index, schedule) {
     if (month === 0) return;
     const tr = document.createElement("tr");
     const values = [
-      formatMonth(addMonths(startMonthInput.value, month - 1)),
+      formatMonth(addMonths(startMonth, month - 1)),
       formatYen(schedule.rows[month - 1].balance),
       formatYen(row.interest),
       formatYen(row.payment),
@@ -355,12 +388,15 @@ function drawChart(series, maxBalance) {
   });
 }
 
-function renderResults(parsedAccounts, targetMonths) {
+function renderResults(parsedAccounts) {
   const series = parsedAccounts.map((account, index) => {
+    const startMonth = getStartMonth(account);
+    const accountTargetMonths = account.targetMonth
+      ? monthsBetween(startMonth, account.targetMonth) + 1
+      : null;
     const schedule = calculateSchedule(account, account.extra);
-    const targetSchedule = calculateSchedule(account, account.extra, targetMonths);
-    const neededExtra = requiredExtra(account, targetMonths);
-    return { account, index, schedule, targetSchedule, neededExtra };
+    const neededExtra = accountTargetMonths === null ? null : requiredExtra(account, accountTargetMonths);
+    return { account, index, schedule, neededExtra, startMonth, targetMonths: accountTargetMonths };
   });
 
   const content = document.createElement("div");
@@ -388,8 +424,8 @@ function renderResults(parsedAccounts, targetMonths) {
 
   const cards = document.createElement("div");
   cards.className = "summary-grid";
-  series.forEach(({ account, index, schedule, neededExtra }) => {
-    cards.append(createSummaryCard(account, index, schedule, neededExtra, targetMonths));
+  series.forEach(({ account, index, schedule, neededExtra, startMonth, targetMonths }) => {
+    cards.append(createSummaryCard(account, index, schedule, neededExtra, startMonth, targetMonths));
   });
 
   const detailsHeading = document.createElement("h3");
@@ -397,13 +433,13 @@ function renderResults(parsedAccounts, targetMonths) {
   detailsHeading.textContent = "月ごとの返済内訳";
   const scheduleList = document.createElement("div");
   scheduleList.className = "schedule-list";
-  series.forEach(({ account, index, schedule }) => {
-    scheduleList.append(createScheduleDetails(account, index, schedule));
+  series.forEach(({ account, index, schedule, startMonth }) => {
+    scheduleList.append(createScheduleDetails(account, index, schedule, startMonth));
   });
 
   content.append(chartWrap, legend, cards, detailsHeading, scheduleList);
   resultsContent.replaceChildren(content);
-  targetSummary.textContent = `目標：${formatMonth(targetMonthInput.value)}（${targetMonths}回の返済）`;
+  targetSummary.textContent = "開始月は借入先ごと（未設定は今月から試算）";
   const maxBalance = Math.max(...parsedAccounts.map((account) => account.balance));
   requestAnimationFrame(() => drawChart(series, maxBalance));
 }
@@ -418,8 +454,7 @@ function updateResults() {
     return;
   }
   const parsedAccounts = accounts.map(parseAccount);
-  const targetMonths = monthsBetween(startMonthInput.value, targetMonthInput.value) + 1;
-  renderResults(parsedAccounts, targetMonths);
+  renderResults(parsedAccounts);
 }
 
 document.querySelector("#add-account").addEventListener("click", () => {
@@ -431,22 +466,19 @@ document.querySelector("#add-account").addEventListener("click", () => {
     apr: "",
     payment: "",
     extra: "0",
+    startMonth: "",
+    targetMonth: "",
   });
   renderAccounts();
   updateResults();
   accountList.lastElementChild?.querySelector('input[type="number"]')?.focus();
 });
 
-startMonthInput.addEventListener("input", updateResults);
-targetMonthInput.addEventListener("input", updateResults);
 window.addEventListener("resize", () => {
   const canvas = document.querySelector("#balance-chart");
   if (canvas && accounts.every((account) => parseAccount(account) !== null)) updateResults();
 });
 
-const now = new Date();
-startMonthInput.value = monthValue(now);
-targetMonthInput.value = addMonths(startMonthInput.value, 23);
 accounts.push({
   id: "account-example",
   name: "借入先1",
@@ -454,6 +486,8 @@ accounts.push({
   apr: "15",
   payment: "20000",
   extra: "0",
+  startMonth: "",
+  targetMonth: "",
 });
 renderAccounts();
 updateResults();

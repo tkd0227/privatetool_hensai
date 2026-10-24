@@ -106,12 +106,6 @@ h2 {
   margin-bottom: 19px;
 }
 
-.settings-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 220px));
-  gap: 16px;
-}
-
 .field {
   display: grid;
   gap: 7px;
@@ -510,10 +504,6 @@ h2 {
     text-align: right;
   }
 
-  .settings-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-
   .account-card {
     padding: 14px 12px;
   }
@@ -543,10 +533,6 @@ h2 {
 }
 
 @media (max-width: 420px) {
-  .settings-grid {
-    grid-template-columns: 1fr;
-  }
-
   .section-heading {
     gap: 10px;
   }

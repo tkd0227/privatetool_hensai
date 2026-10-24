@@ -14,30 +14,10 @@
         <div>
           <p class="eyebrow">REPAYMENT PLANNER</p>
           <h1>返済計画シミュレーター</h1>
-          <p class="intro">借入先ごとの返済推移と、目標月に向けた追加返済額を確認できます。</p>
+          <p class="intro">借入先ごとに返済開始月・完済目標月を設定して、返済推移と完済見込みを確認できます。</p>
         </div>
         <span class="privacy-note">入力内容はこの画面内だけで処理されます</span>
       </header>
-
-      <section class="panel settings-panel" aria-labelledby="plan-heading">
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow">PLAN SETTINGS</p>
-            <h2 id="plan-heading">計画の条件</h2>
-          </div>
-          <p class="section-help">基準月から毎月返済する想定で計算します。</p>
-        </div>
-        <div class="settings-grid">
-          <label class="field">
-            <span>返済開始月</span>
-            <input id="start-month" type="month" required>
-          </label>
-          <label class="field">
-            <span>完済目標月</span>
-            <input id="target-month" type="month" required>
-          </label>
-        </div>
-      </section>
 
       <section class="panel accounts-panel" aria-labelledby="accounts-heading">
         <div class="section-heading">
@@ -47,7 +27,7 @@
           </div>
           <button class="button button-secondary" id="add-account" type="button">＋ 借入先を追加</button>
         </div>
-        <p class="section-help accounts-help">現在の元金残高・年利・毎月の定額返済額を入力してください。追加返済額は定額返済に上乗せする月額です。</p>
+        <p class="section-help accounts-help">返済開始月・完済目標月は借入先ごとに設定できます（どちらも任意）。開始月が未設定の場合は今月から試算します。追加返済額は定額返済に上乗せする月額です。</p>
         <div class="account-list" id="account-list" aria-live="polite"></div>
         <p class="form-error" id="form-error" role="alert" hidden></p>
         <p class="assumption-note">利息は「月初の元金残高 × 年利 ÷ 12」を1円単位に四捨五入し、月末に返済する簡易試算です。実際の利息・返済額・完済日は、金融機関の計算方法や返済日によって異なります。</p>
